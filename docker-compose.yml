@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: pg_udi
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin_udi
+      POSTGRES_DB: finanzas_db  
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_password
+    secrets:
+      - pg_password
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf #
+      - ./scripts/script_postgresql_fintech_analitica.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - fintech_net
+    ports:
+      - "5432:5432"
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb_udi
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: fintech_core # Ajusta al nombre que cree tu script de MariaDB
+    volumes:
+      - ./scripts/script_mariadb_fintech_core.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - fintech_net
+    ports:
+      - "3307:3306"
+
+secrets:
+  pg_password:
+    file: ./password.txt
+
+volumes:
+  pg_data:
+    name: udi_pg_data
+
+networks:
+  fintech_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
